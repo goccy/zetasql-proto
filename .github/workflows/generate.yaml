@@ -1,0 +1,46 @@
+name: Generate
+on:
+  schedule:
+    - cron:  '0 0 * * *'
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: '1.20'
+      - name: setup
+        run: |
+          curl https://bazel.build/bazel-release.pub.gpg | sudo apt-key add -
+          sudo echo "deb [arch=amd64] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends curl ca-certificates gnupg make g++ git python3 openjdk-11-jdk unzip
+          sudo update-alternatives --install /usr/bin/python python /usr/bin/python3 100
+      - name: install bazelisk
+        run: |
+          go install github.com/bazelbuild/bazelisk@latest
+      - name: checkout zetasql
+        uses: actions/checkout@v3
+        with:
+          repository: google/zetasql
+          path: .zetasql
+      - name: copy all proto files
+        run: |
+          rsync -a --prune-empty-dirs --include '*/' --include '*.proto' --exclude '*' .zetasql/zetasql .
+      - name: generate proto
+        run: |
+          cd ./.zetasql && bazelisk build '//zetasql/parser:gen_protos'
+          PROTO_PATH=$(find $(readlink bazel-out) -name 'parse_tree.proto')
+          cp $PROTO_PATH ../zetasql/parser/parse_tree.proto
+      - name: commit and push if exists proto
+        run: |
+          git add -N .
+          if ! git diff --exit-code --quiet
+          then
+            git config --local user.name "github-actions[bot]"
+            git config --local user.email "github-actions[bot]@users.noreply.github.com"
+            git add .
+            git commit -m "update proto"
+            git push -u origin main
+          fi
