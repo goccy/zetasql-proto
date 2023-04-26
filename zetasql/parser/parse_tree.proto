@@ -348,6 +348,8 @@ message AnyASTExpressionProto {
     ASTBracedNewConstructorProto ast_braced_new_constructor_node = 333;
     ASTWithExpressionProto ast_with_expression_node = 335;
     ASTRangeLiteralProto ast_range_literal_node = 354;
+    ASTSequenceArgProto ast_sequence_arg_node = 391;
+    ASTExpressionWithAliasProto ast_expression_with_alias_node = 395;
   }
 }
 message ASTExpressionProto {
@@ -672,6 +674,12 @@ message ASTRollupProto {
   repeated AnyASTExpressionProto expressions = 2;
 }
 
+message ASTExpressionWithAliasProto {
+  optional ASTExpressionProto parent = 1;
+  optional AnyASTExpressionProto expression = 2;
+  optional ASTAliasProto alias = 3;
+}
+
 message ASTFunctionCallProto {
   optional ASTExpressionProto parent = 1;
   optional ASTPathExpressionProto function = 2;
@@ -882,6 +890,13 @@ message ASTIntervalExprProto {
   optional AnyASTExpressionProto interval_value = 2;
   optional ASTIdentifierProto date_part_name = 3;
   optional ASTIdentifierProto date_part_name_to = 4;
+}
+
+// This represents a clause of form "SEQUENCE <target>", where <target> is a
+// sequence name.
+message ASTSequenceArgProto {
+  optional ASTExpressionProto parent = 1;
+  optional ASTPathExpressionProto sequence_path = 2;
 }
 
 // Represents a named function call argument using syntax: name => expression.
@@ -1532,6 +1547,7 @@ message AnyASTCreateStatementProto {
     AnyASTCreateViewStatementBaseProto ast_create_view_statement_base_node = 298;
     AnyASTCreateFunctionStmtBaseProto ast_create_function_stmt_base_node = 313;
     ASTCreatePrivilegeRestrictionStatementProto ast_create_privilege_restriction_statement_node = 324;
+    ASTCreateReplicaMaterializedViewStatementProto ast_create_replica_materialized_view_statement_node = 393;
   }
 }
 message ASTCreateStatementProto {
@@ -1649,6 +1665,7 @@ message AnyASTTableDataSourceProto {
   oneof node {
     ASTCloneDataSourceProto ast_clone_data_source_node = 161;
     ASTCopyDataSourceProto ast_copy_data_source_node = 162;
+    ASTReplicaMaterializedViewDataSourceProto ast_replica_materialized_view_data_source_node = 392;
   }
 }
 message ASTTableDataSourceProto {
@@ -3229,5 +3246,16 @@ message ASTUndropStatementProto {
   optional ASTPathExpressionProto name = 3;
   optional bool is_if_not_exists = 4;
   optional ASTForSystemTimeProto for_system_time = 5;
+}
+
+message ASTReplicaMaterializedViewDataSourceProto {
+  optional ASTTableDataSourceProto parent = 1;
+}
+
+message ASTCreateReplicaMaterializedViewStatementProto {
+  optional ASTCreateStatementProto parent = 1;
+  optional ASTPathExpressionProto name = 2;
+  optional ASTReplicaMaterializedViewDataSourceProto data_source = 3;
+  optional ASTOptionsListProto options_list = 4;
 }
 // clang-format on
