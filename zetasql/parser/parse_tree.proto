@@ -2899,6 +2899,7 @@ message AnyASTCreateViewStatementBaseProto {
   oneof node {
     ASTCreateViewStatementProto ast_create_view_statement_node = 299;
     ASTCreateMaterializedViewStatementProto ast_create_materialized_view_statement_node = 300;
+    ASTCreateApproxViewStatementProto ast_create_approx_view_statement_node = 397;
   }
 }
 message ASTCreateViewStatementBaseProto {
@@ -2919,6 +2920,10 @@ message ASTCreateMaterializedViewStatementProto {
   optional ASTCreateViewStatementBaseProto parent = 1;
   optional ASTPartitionByProto partition_by = 2;
   optional ASTClusterByProto cluster_by = 3;
+}
+
+message ASTCreateApproxViewStatementProto {
+  optional ASTCreateViewStatementBaseProto parent = 1;
 }
 
 // Base class for all loop statements (loop/end loop, while, foreach, etc.).
@@ -2977,6 +2982,7 @@ message AnyASTAlterStatementBaseProto {
     ASTAlterEntityStatementProto ast_alter_entity_statement_node = 312;
     ASTAlterPrivilegeRestrictionStatementProto ast_alter_privilege_restriction_statement_node = 325;
     ASTAlterModelStatementProto ast_alter_model_statement_node = 336;
+    ASTAlterApproxViewStatementProto ast_alter_approx_view_statement_node = 396;
   }
 }
 message ASTAlterStatementBaseProto {
@@ -3003,6 +3009,10 @@ message ASTAlterViewStatementProto {
 }
 
 message ASTAlterMaterializedViewStatementProto {
+  optional ASTAlterStatementBaseProto parent = 1;
+}
+
+message ASTAlterApproxViewStatementProto {
   optional ASTAlterStatementBaseProto parent = 1;
 }
 
