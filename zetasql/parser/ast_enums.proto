@@ -76,6 +76,15 @@ message ASTBinaryExpressionEnums {
   }
 }
 
+message ASTOptionsEntryEnums {
+  enum AssignmentOp {
+    NOT_SET = 0;
+    ASSIGN = 1;      // "="
+    ADD_ASSIGN = 2;  // "+="
+    SUB_ASSIGN = 3;  // "-="
+  }
+}
+
 message ASTOrderingExpressionEnums {
   enum OrderingSpec {
     NOT_SET = 0;
@@ -256,6 +265,10 @@ message ASTGeneratedColumnInfoEnums {
     NON_STORED = 0;
     STORED = 1;
     STORED_VOLATILE = 2;
+  }
+  enum GeneratedMode {
+    ALWAYS = 0;
+    BY_DEFAULT = 1;
   }
 }
 message ASTColumnPositionEnums {

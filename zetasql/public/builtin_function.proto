@@ -50,14 +50,14 @@ enum FunctionSignatureId {
   // 1700-1799 Net functions                  (NextId: 1716)
   // 1800-1899 More time functions            (NextId: 1864)
   // 1900-1999 Hashing/encryption functions   (NextId: 1938)
-  // 2000-2199 Geography functions            (NextId: 2090)
+  // 2000-2199 Geography functions            (NextId: 2092)
   // 2200-2231 Anonymization functions        (NextId: 2232)
-  // 2300-2499 Numeric & more math functions  (NextId: 2325)
-  // 2500-2599 Array and proto map functions  (NextId: 2552)
-  // 2600-2699 More misc functions.           (NextId: 2615)
+  // 2300-2499 Numeric, more math & distances (NextId: 2355)
+  // 2500-2599 Array and proto map functions  (NextId: 2561)
+  // 2600-2699 More misc functions.           (NextId: 2622)
   // 2700-2799 Aggregate functions II         (NextId: 2746)
   // 2800-2899 Differential Privacy functions (NextId: 2832)
-  // 2900-2999 Range functions                (NextId: 2916)
+  // 2900-2999 Range functions                (NextId: 2921)
 
   // enum value                       // Related function name
   // ----------                       // ---------------------
@@ -546,6 +546,27 @@ enum FunctionSignatureId {
   FN_PARSE_NUMERIC = 2314;         // parse_numeric(string) -> numeric
   FN_PARSE_BIGNUMERIC = 2315;      // parse_bignumeric(string) -> bignumeric
 
+  FN_PI_DOUBLE = 2325;      // pi -> double
+  FN_PI_NUMERIC = 2326;     // pi_numeric -> numeric
+  FN_PI_BIGNUMERIC = 2327;  // pi_bignumeric -> bignumeric
+
+  FN_NULLIFZERO_INT32 = 2329;       // nullifzero
+  FN_NULLIFZERO_UINT32 = 2330;      // nullifzero
+  FN_NULLIFZERO_INT64 = 2331;       // nullifzero
+  FN_NULLIFZERO_UINT64 = 2332;      // nullifzero
+  FN_NULLIFZERO_FLOAT = 2333;       // nullifzero
+  FN_NULLIFZERO_DOUBLE = 2334;      // nullifzero
+  FN_NULLIFZERO_NUMERIC = 2335;     // nullifzero
+  FN_NULLIFZERO_BIGNUMERIC = 2336;  // nullifzero
+  FN_ZEROIFNULL_INT32 = 2337;       // zeroifnull
+  FN_ZEROIFNULL_UINT32 = 2338;      // zeroifnull
+  FN_ZEROIFNULL_INT64 = 2339;       // zeroifnull
+  FN_ZEROIFNULL_UINT64 = 2340;      // zeroifnull
+  FN_ZEROIFNULL_FLOAT = 2341;       // zeroifnull
+  FN_ZEROIFNULL_DOUBLE = 2342;      // zeroifnull
+  FN_ZEROIFNULL_NUMERIC = 2343;     // zeroifnull
+  FN_ZEROIFNULL_BIGNUMERIC = 2344;  // zeroifnull
+
   FN_COS_DOUBLE = 1328;    // cos
   FN_COSH_DOUBLE = 1329;   // cosh
   FN_ACOS_DOUBLE = 1330;   // acos
@@ -985,6 +1006,7 @@ enum FunctionSignatureId {
   FN_ST_CONVEXHULL = 2065;
   FN_ST_EXTERIORRING = 2078;
   FN_ST_INTERIORRINGS = 2079;
+  FN_ST_LINE_SUBSTRING = 2091;
 
   // Predicates
   FN_ST_EQUALS = 2020;
@@ -1022,6 +1044,7 @@ enum FunctionSignatureId {
   FN_ST_AZIMUTH = 2080;
   FN_ST_ANGLE = 2081;
   FN_ST_LINE_LOCATE_POINT = 2089;
+  FN_ST_HAUSDORFF_DISTANCE = 2090;
 
   // Parsers/formatters
   FN_ST_GEOG_FROM_TEXT = 2050;
@@ -1042,7 +1065,7 @@ enum FunctionSignatureId {
 
   // Aggregate functions
   FN_ST_UNION_AGG = 2061;
-  FN_ST_ACCUM = 2062;
+  FN_ST_ACCUM = 2062;  // Deprecated.
   FN_ST_CENTROID_AGG = 2063;
   FN_ST_NEAREST_NEIGHBORS = 2067;
   FN_ST_EXTENT = 2083;
@@ -1206,49 +1229,113 @@ enum FunctionSignatureId {
   FN_ARRAY_MAX_FLOAT = 2542;   // ARRAY_MAX(array<FLOAT>) -> FLOAT
   FN_ARRAY_MAX_DOUBLE = 2543;  // ARRAY_MAX(array<DOUBLE>) -> DOUBLE
 
+  FN_ARRAY_FIRST_N = 2544;  // ARRAY_FIRST(array<T>, N) -> ARRAY<T>
+  FN_ARRAY_LAST_N = 2545;   // ARRAY_LAST(array<T>, N) -> ARRAY<T>
+  // ARRAY_REMOVE_FIRST(array<T>, N) -> ARRAY<T>
+  FN_ARRAY_REMOVE_FIRST_N = 2546;
+  FN_ARRAY_REMOVE_LAST_N = 2547;  // ARRAY_REMOVE_LAST(array<T>, N) -> ARRAY<T>
+
+  // ARRAY_ZIP(array<T1>, array<T2>[, ARRAY_ZIP_MODE]) -> ARRAY<STRUCT<T1, T2>>
+  FN_ARRAY_ZIP_TWO_ARRAY = 2552;
+
+  // ARRAY_ZIP(array<T1>, array<T2>, LAMBDA(T1, T2) -> T3[, ARRAY_ZIP_MODE]) ->
+  // ARRAY<T3>
+  FN_ARRAY_ZIP_TWO_ARRAY_LAMBDA = 2553;
+
+  // ARRAY_ZIP(array<T1>, array<T2>, array<T3>[, ARRAY_ZIP_MODE]) ->
+  // ARRAY<STRUCT<T1, T2, T3>>
+  FN_ARRAY_ZIP_THREE_ARRAY = 2555;
+
+  // ARRAY_ZIP(array<T1>, array<T2>, array<T3>, LAMBDA(T1, T2, T3) -> T4[,
+  // ARRAY_ZIP_MODE]) -> ARRAY<T4>
+  FN_ARRAY_ZIP_THREE_ARRAY_LAMBDA = 2556;
+
+  // ARRAY_ZIP(array<T1>, array<T2>, array<T3>, array<T4>[, ARRAY_ZIP_MODE]) ->
+  // ARRAY<STRUCT<T1, T2, T3, T4>>
+  FN_ARRAY_ZIP_FOUR_ARRAY = 2558;
+
+  // ARRAY_ZIP(array<T1>, array<T2>, array<T3>, array<T4>, LAMBDA(T1, T2, T3,
+  // T4) -> T5[, ARRAY_ZIP_MODE]) -> ARRAY<T5>
+  FN_ARRAY_ZIP_FOUR_ARRAY_LAMBDA = 2559;
+
+  // Deprecated ARRAY_ZIP signatures.
+  reserved 2554, 2557, 2560;
+
   // More misc functions
   FN_JSON_TO_INT64 = 2600;   // int64(json) -> int64
   FN_JSON_TO_BOOL = 2601;    // bool(json) -> bool
   FN_JSON_TO_STRING = 2602;  // string(json) -> string
   FN_JSON_TYPE = 2603;       // json_type(json) -> type
-  FN_JSON_TO_DOUBLE = 2604;  // double(json[, string]) -> double
+  FN_JSON_TO_DOUBLE = 2604;  // float64(json[, string]) -> double
 
   FN_JSON_LAX_TO_INT64 = 2606;   // lax_int64(json) -> int64
   FN_JSON_LAX_TO_BOOL = 2607;    // lax_bool(json) -> bool
   FN_JSON_LAX_TO_STRING = 2608;  // lax_string(json) -> string
-  FN_JSON_LAX_TO_DOUBLE = 2609;  // lax_double(json) -> double
+  FN_JSON_LAX_TO_DOUBLE = 2609;  // lax_float64(json) -> double
 
-  FN_JSON_ARRAY = 2614;  // json_array(any, ...) -> json
+  FN_JSON_ARRAY = 2614;   // json_array(any, ...) -> json
+  FN_JSON_OBJECT = 2615;  // json_object(string, any, ...) -> json
+  FN_JSON_OBJECT_ARRAYS =
+      2616;               // json_object(array<string>, array<any>) -> json
+  FN_JSON_REMOVE = 2617;  // json_remove(json, string, ...) -> json
+  FN_JSON_SET =
+      2618;  // json_set(json, string, any[, string, any, ...]) -> json
+  FN_JSON_STRIP_NULLS =
+      2619;  // json_strip_nulls(json[, string][, bool][, bool]) -> json
+  FN_JSON_ARRAY_INSERT =
+      2620;  // json_array_insert(json, string, any[, string, any, ...][, bool])
+  FN_JSON_ARRAY_APPEND =
+      2621;  // json_array_append(json, string, any[, string, any, ...][, bool])
 
   // Range functions
   FN_RANGE = 2605;                     // RANGE(T start, T end) -> range
   FN_RANGE_IS_START_UNBOUNDED = 2900;  // is_start_unbounded(range) -> bool
-  // This was added to handle untyped NULL for RANGE_IS_START_UNBOUNDED
-  FN_RANGE_IS_START_UNBOUNDED_INT64 =
-      2901;                          // is_start_unbounded(int64) -> bool
-  FN_RANGE_IS_END_UNBOUNDED = 2902;  // is_end_unbounded(range) -> bool
-  // This was added to handle untyped NULL for RANGE_IS_END_UNBOUNDED
-  FN_RANGE_IS_END_UNBOUNDED_INT64 = 2903;  // is_end_unbounded(int64) -> bool
-  FN_RANGE_START = 2904;                   // range_start(range<T>) -> T
-  // This was added to handle untyped NULL for FN_RANGE_START
-  FN_RANGE_START_INT64 = 2905;  // range_start(int64) -> int64
-  FN_RANGE_END = 2906;          // range_end(range<T>) -> T
-  // This was added to handle untyped NULL for FN_RANGE_END
-  FN_RANGE_END_INT64 = 2907;  // range_end(int64) -> int64
+  FN_RANGE_IS_END_UNBOUNDED = 2902;    // is_end_unbounded(range) -> bool
+  FN_RANGE_START = 2904;               // range_start(range<T>) -> T
+  FN_RANGE_END = 2906;                 // range_end(range<T>) -> T
   FN_RANGE_OVERLAPS = 2908;   // range_overlaps(range<T>, range<T>) -> bool
-  // These were added to handle untyped NULL for FN_RANGE_OVERLAPS
-  // range_overlaps(int64, range<T>) -> bool
-  FN_RANGE_OVERLAPS_LEFT_INT64 = 2909;
-  // range_overlaps(range<T>, int64) -> bool
-  FN_RANGE_OVERLAPS_RIGHT_INT64 = 2910;
-  // range_overlaps(int64, int64) -> bool
-  FN_RANGE_OVERLAPS_BOTH_INT64 = 2911;
   FN_RANGE_INTERSECT = 2912;  // range_intersect(range<T>, range<T>) -> range<T>
-  // These were added to handle untyped NULL for FN_RANGE_INTERSECT
-  // range_intersect(int64, range<T>) -> int64
-  FN_RANGE_INTERSECT_LEFT_INT64 = 2913;
-  // range_intersect(range<T>, int64) -> int64
-  FN_RANGE_INTERSECT_RIGHT_INT64 = 2914;
-  // range_intersect(int64, int64) -> int64
-  FN_RANGE_INTERSECT_BOTH_INT64 = 2915;
+  reserved 2901, 2903, 2905, 2907, 2909, 2910, 2911, 2913, 2914, 2915;
+
+  // generate_range_array(range<date>, INTERVAL, bool) -> array<range<date>>
+  FN_GENERATE_DATE_RANGE_ARRAY = 2916;
+  // generate_range_array(range<datetime>, INTERVAL, bool) ->
+  // array<range<datetime>>
+  FN_GENERATE_DATETIME_RANGE_ARRAY = 2917;
+  // generate_range_array(range<timestamp>, INTERVAL, bool) ->
+  // array<range<timestamp>>
+  FN_GENERATE_TIMESTAMP_RANGE_ARRAY = 2918;
+
+  // range_contains(range<T>, range<T>) -> bool
+  FN_RANGE_CONTAINS_RANGE = 2919;
+  // range_contains(range<T>, T) -> bool
+  FN_RANGE_CONTAINS_ELEMENT = 2920;
+
+  // Distance functions.
+
+  // cosine_distance(array<DOUBLE>, array<DOUBLE>) -> DOUBLE
+  FN_COSINE_DISTANCE_DENSE_DOUBLE = 2345;
+  // cosine_distance(array<FLOAT>, array<FLOAT>) -> DOUBLE
+  FN_COSINE_DISTANCE_DENSE_FLOAT = 2353;
+  // cosine_distance(array<struct<INT64, DOUBLE>>, array<struct<INT64, DOUBLE>>)
+  // -> DOUBLE
+  FN_COSINE_DISTANCE_SPARSE_INT64 = 2346;
+  // cosine_distance(array<struct<STRING, DOUBLE>>, array<struct<STRING,
+  // DOUBLE>>) -> DOUBLE
+  FN_COSINE_DISTANCE_SPARSE_STRING = 2347;
+
+  // euclidean_distance(array<DOUBLE>, array<DOUBLE>) -> DOUBLE
+  FN_EUCLIDEAN_DISTANCE_DENSE_DOUBLE = 2348;
+  // euclidean_distance(array<FLOAT>, array<FLOAT>) -> DOUBLE
+  FN_EUCLIDEAN_DISTANCE_DENSE_FLOAT = 2354;
+  // euclidean_distance(array<struct<INT64, DOUBLE>>, array<struct<INT64,
+  // DOUBLE>>) -> DOUBLE
+  FN_EUCLIDEAN_DISTANCE_SPARSE_INT64 = 2349;
+  // euclidean_distance(array<struct<STRING, DOUBLE>>, array<struct<STRING,
+  // DOUBLE>>) -> DOUBLE
+  FN_EUCLIDEAN_DISTANCE_SPARSE_STRING = 2350;
+  // edit_distance(STRING, STRING[, INT64]) -> INT64
+  FN_EDIT_DISTANCE = 2351;
+  // edit_distance(BYTES, BYTES[, INT64]) -> INT64
+  FN_EDIT_DISTANCE_BYTES = 2352;
 }
