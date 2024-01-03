@@ -40,6 +40,8 @@ jobs:
           cd ./.zetasql && bazelisk build '//zetasql/parser:gen_protos'
           PROTO_PATH=$(find $(readlink bazel-out) -name 'parse_tree.proto')
           cp $PROTO_PATH ../zetasql/parser/parse_tree.proto
+        env:
+          USE_BAZEL_VERSION: 7.0.0
       - name: commit and push if exists proto
         run: |
           git add -N .
