@@ -27,6 +27,9 @@ jobs:
       - name: install bazelisk
         run: |
           go install github.com/bazelbuild/bazelisk@latest
+        env:
+          ANDROID_HOME: $HOME/.android/sdk
+          ANDROID_SDK_ROOT: $HOME/.android/sdk
       - name: checkout zetasql
         uses: actions/checkout@v4
         with:
@@ -42,7 +45,7 @@ jobs:
           cp $PROTO_PATH ../zetasql/parser/parse_tree.proto
         env:
           USE_BAZEL_VERSION: 7.0.0
-          ANDROID_SDK_HOME: $HOME/.android/sdk
+          ANDROID_HOME: $HOME/.android/sdk
       - name: commit and push if exists proto
         run: |
           git add -N .
