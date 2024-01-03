@@ -37,6 +37,9 @@ jobs:
       - name: copy all proto files
         run: |
           rsync -a --prune-empty-dirs --include '*/' --include '*.proto' --exclude '*' .zetasql/zetasql .
+      - name: install sdk
+        run: |
+          sdkmanager --sdk_root=/usr/local/lib/android/sdk "build-tools;30.0.3"
       - name: generate proto
         run: |
           cd ./.zetasql && bazelisk build '//zetasql/parser:gen_protos'
