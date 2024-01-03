@@ -187,6 +187,17 @@ message AnyASTNodeProto {
     ASTSetOperationMetadataProto ast_set_operation_metadata_node = 387;
     ASTSetOperationColumnMatchModeProto ast_set_operation_column_match_mode_node = 389;
     ASTSetOperationColumnPropagationModeProto ast_set_operation_column_propagation_mode_node = 390;
+    ASTCubeProto ast_cube_node = 399;
+    ASTGroupingSetProto ast_grouping_set_node = 400;
+    ASTGroupingSetListProto ast_grouping_set_list_node = 401;
+    ASTExpressionWithOptAliasProto ast_expression_with_opt_alias_node = 402;
+    ASTGroupByAllProto ast_group_by_all_node = 403;
+    ASTFunctionTypeArgListProto ast_function_type_arg_list_node = 404;
+    ASTIdentityColumnInfoProto ast_identity_column_info_node = 424;
+    ASTIdentityColumnStartWithProto ast_identity_column_start_with_node = 425;
+    ASTIdentityColumnIncrementByProto ast_identity_column_increment_by_node = 426;
+    ASTIdentityColumnMaxValueProto ast_identity_column_max_value_node = 427;
+    ASTIdentityColumnMinValueProto ast_identity_column_min_value_node = 428;
   }
 }
 
@@ -238,6 +249,7 @@ message AnyASTStatementProto {
     ASTSystemVariableAssignmentProto ast_system_variable_assignment_node = 293;
     ASTExecuteImmediateStatementProto ast_execute_immediate_statement_node = 321;
     ASTDefineMacroStatementProto ast_define_macro_statement_node = 369;
+    ASTExportMetadataStatementProto ast_export_metadata_statement_node = 398;
   }
 }
 message ASTStatementProto {
@@ -518,18 +530,35 @@ message ASTOrExprProto {
 }
 
 // Represents a grouping item, which is either an expression (a regular
-// group by key) or a rollup list.
+// group by key), or a rollup list, or a cube list, or a grouping set list.
+// The item "()", meaning an empty grouping list, is represented as an
+// ASTGroupingItem with no children.
 message ASTGroupingItemProto {
   optional ASTNodeProto parent = 1;
-  // Exactly one of expression() and rollup() will be non-NULL.
   optional AnyASTExpressionProto expression = 2;
+  // A rollup() containing multiple expressions.
   optional ASTRollupProto rollup = 3;
+  // A cube() containing multiple expressions.
+  optional ASTCubeProto cube = 4;
+  // A list of grouping set and each of them is an
+  // ASTGroupingSet.
+  optional ASTGroupingSetListProto grouping_set_list = 5;
 }
 
 message ASTGroupByProto {
   optional ASTNodeProto parent = 1;
   optional ASTHintProto hint = 2;
-  repeated ASTGroupingItemProto grouping_items = 3;
+  // When `all` is set, it represents syntax: GROUP BY ALL. The syntax
+  // is mutually exclusive with syntax GROUP BY `grouping items`, in
+  // which case `all` is nullptr and `grouping_items` is non-empty.
+  optional ASTGroupByAllProto all = 3;
+  repeated ASTGroupingItemProto grouping_items = 4;
+}
+
+// Wrapper node for the keyword ALL in syntax GROUP BY ALL to provide parse
+// location range.
+message ASTGroupByAllProto {
+  optional ASTNodeProto parent = 1;
 }
 
 message ASTOrderingExpressionProto {
@@ -613,6 +642,7 @@ message AnyASTTypeProto {
     ASTArrayTypeProto ast_array_type_node = 39;
     ASTStructTypeProto ast_struct_type_node = 41;
     ASTRangeTypeProto ast_range_type_node = 358;
+    ASTFunctionTypeProto ast_function_type_node = 405;
   }
 }
 message ASTTypeProto {
@@ -649,6 +679,19 @@ message ASTStructTypeProto {
   optional ASTCollateProto collate = 4;
 }
 
+message ASTFunctionTypeArgListProto {
+  optional ASTNodeProto parent = 1;
+  repeated AnyASTTypeProto args = 2;
+}
+
+message ASTFunctionTypeProto {
+  optional ASTTypeProto parent = 1;
+  optional ASTFunctionTypeArgListProto arg_list = 2;
+  optional AnyASTTypeProto return_type = 3;
+  optional ASTTypeParameterListProto type_parameters = 4;
+  optional ASTCollateProto collate = 5;
+}
+
 message ASTCastExpressionProto {
   optional ASTExpressionProto parent = 1;
   optional AnyASTExpressionProto expr = 2;
@@ -672,6 +715,31 @@ message ASTSelectAsProto {
 message ASTRollupProto {
   optional ASTNodeProto parent = 1;
   repeated AnyASTExpressionProto expressions = 2;
+}
+
+// Represents a cube list which contains a list of expressions.
+message ASTCubeProto {
+  optional ASTNodeProto parent = 1;
+  repeated AnyASTExpressionProto expressions = 2;
+}
+
+// Represents a grouping set, which is either an empty grouping set "()",
+// or a rollup, or a cube, or an expression.
+//
+// The expression can be single-level nested to represent a column list,
+// e.g. (x, y), it will be represented as an ASTStructConstructorWithParens
+// in this case.
+message ASTGroupingSetProto {
+  optional ASTNodeProto parent = 1;
+  optional AnyASTExpressionProto expression = 2;
+  optional ASTRollupProto rollup = 3;
+  optional ASTCubeProto cube = 4;
+}
+
+// Represents a list of grouping set, each grouping set is an ASTGroupingSet.
+message ASTGroupingSetListProto {
+  optional ASTNodeProto parent = 1;
+  repeated ASTGroupingSetProto grouping_sets = 2;
 }
 
 message ASTExpressionWithAliasProto {
@@ -1035,9 +1103,17 @@ message ASTUnaryExpressionProto {
   optional ASTUnaryExpressionEnums.Op op = 3;
 }
 
-message ASTUnnestExpressionProto {
+message ASTExpressionWithOptAliasProto {
   optional ASTNodeProto parent = 1;
   optional AnyASTExpressionProto expression = 2;
+  optional ASTAliasProto optional_alias = 3;
+}
+
+message ASTUnnestExpressionProto {
+  optional ASTNodeProto parent = 1;
+  // Grammar guarantees `expressions_` is not empty.
+  repeated ASTExpressionWithOptAliasProto expressions = 2;
+  optional ASTNamedArgumentProto array_zip_mode = 3;
 }
 
 message ASTWindowClauseProto {
@@ -1237,13 +1313,13 @@ message AnyASTDdlStatementProto {
     ASTDropTableFunctionStatementProto ast_drop_table_function_statement_node = 114;
     ASTDropMaterializedViewStatementProto ast_drop_materialized_view_statement_node = 116;
     ASTDropSnapshotTableStatementProto ast_drop_snapshot_table_statement_node = 117;
-    ASTDropSearchIndexStatementProto ast_drop_search_index_statement_node = 118;
     AnyASTCreateStatementProto ast_create_statement_node = 150;
     ASTDropRowAccessPolicyStatementProto ast_drop_row_access_policy_statement_node = 287;
     ASTDropStatementProto ast_drop_statement_node = 289;
     AnyASTAlterStatementBaseProto ast_alter_statement_base_node = 305;
     ASTDropPrivilegeRestrictionStatementProto ast_drop_privilege_restriction_statement_node = 326;
     ASTUndropStatementProto ast_undrop_statement_node = 388;
+    AnyASTDropIndexStatementProto ast_drop_index_statement_node = 407;
   }
 }
 message ASTDdlStatementProto {
@@ -1297,12 +1373,29 @@ message ASTDropSnapshotTableStatementProto {
   optional bool is_if_exists = 3;
 }
 
-// Represents a DROP SEARCH INDEX statement.
-message ASTDropSearchIndexStatementProto {
+// Represents a DROP SEARCH|VECTOR INDEX statement. It is different from the
+// regular drop index in that it has a trailing "ON PATH" clause.
+message AnyASTDropIndexStatementProto {
+  oneof node {
+    ASTDropSearchIndexStatementProto ast_drop_search_index_statement_node = 118;
+    ASTDropVectorIndexStatementProto ast_drop_vector_index_statement_node = 406;
+  }
+}
+message ASTDropIndexStatementProto {
   optional ASTDdlStatementProto parent = 1;
   optional ASTPathExpressionProto name = 2;
   optional ASTPathExpressionProto table_name = 3;
   optional bool is_if_exists = 4;
+}
+
+// Represents a DROP SEARCH INDEX statement.
+message ASTDropSearchIndexStatementProto {
+  optional ASTDropIndexStatementProto parent = 1;
+}
+
+// Represents a DROP VECTOR INDEX statement.
+message ASTDropVectorIndexStatementProto {
+  optional ASTDropIndexStatementProto parent = 1;
 }
 
 // Represents a RENAME statement.
@@ -1528,6 +1621,8 @@ message ASTOptionsEntryProto {
   // Value may be any expression; engines can decide whether they
   // support identifiers, literals, parameters, constants, etc.
   optional AnyASTExpressionProto value = 3;
+  // See description of Op values in ast_enums.proto.
+  optional ASTOptionsEntryEnums.AssignmentOp assignment_op = 4;
 }
 
 // Common superclass of CREATE statements supporting the common
@@ -1537,7 +1632,6 @@ message AnyASTCreateStatementProto {
   oneof node {
     ASTCreateConstantStatementProto ast_create_constant_statement_node = 165;
     ASTCreateProcedureStatementProto ast_create_procedure_statement_node = 167;
-    ASTCreateSchemaStatementProto ast_create_schema_statement_node = 168;
     ASTCreateModelStatementProto ast_create_model_statement_node = 170;
     ASTCreateIndexStatementProto ast_create_index_statement_node = 175;
     ASTCreateSnapshotTableStatementProto ast_create_snapshot_table_statement_node = 181;
@@ -1547,7 +1641,8 @@ message AnyASTCreateStatementProto {
     AnyASTCreateViewStatementBaseProto ast_create_view_statement_base_node = 298;
     AnyASTCreateFunctionStmtBaseProto ast_create_function_stmt_base_node = 313;
     ASTCreatePrivilegeRestrictionStatementProto ast_create_privilege_restriction_statement_node = 324;
-    ASTCreateReplicaMaterializedViewStatementProto ast_create_replica_materialized_view_statement_node = 393;
+    ASTCreateSnapshotStatementProto ast_create_snapshot_statement_node = 430;
+    AnyASTCreateSchemaStmtBaseProto ast_create_schema_stmt_base_node = 438;
   }
 }
 message ASTCreateStatementProto {
@@ -1665,7 +1760,6 @@ message AnyASTTableDataSourceProto {
   oneof node {
     ASTCloneDataSourceProto ast_clone_data_source_node = 161;
     ASTCopyDataSourceProto ast_copy_data_source_node = 162;
-    ASTReplicaMaterializedViewDataSourceProto ast_replica_materialized_view_data_source_node = 392;
   }
 }
 message ASTTableDataSourceProto {
@@ -1722,15 +1816,36 @@ message ASTCreateProcedureStatementProto {
   optional ASTWithConnectionClauseProto with_connection_clause = 6;
   optional ASTIdentifierProto language = 7;
   optional ASTStringLiteralProto code = 8;
+  optional ASTCreateStatementEnums.SqlSecurity external_security = 9;
+}
+
+// A base class to be used by statements that create schemas, including
+// CREATE SCHEMA and CREATE EXTERNAL SCHEMA.
+message AnyASTCreateSchemaStmtBaseProto {
+  oneof node {
+    ASTCreateSchemaStatementProto ast_create_schema_statement_node = 168;
+    ASTCreateExternalSchemaStatementProto ast_create_external_schema_statement_node = 439;
+  }
+}
+message ASTCreateSchemaStmtBaseProto {
+  optional ASTCreateStatementProto parent = 1;
+  optional ASTPathExpressionProto name = 2;
+  optional ASTOptionsListProto options_list = 3;
 }
 
 // This represents a CREATE SCHEMA statement, i.e.,
 // CREATE SCHEMA <name> [OPTIONS (name=value, ...)];
 message ASTCreateSchemaStatementProto {
-  optional ASTCreateStatementProto parent = 1;
-  optional ASTPathExpressionProto name = 2;
-  optional ASTCollateProto collate = 3;
-  optional ASTOptionsListProto options_list = 4;
+  optional ASTCreateSchemaStmtBaseProto parent = 1;
+  optional ASTCollateProto collate = 2;
+}
+
+// This represents a CREATE EXTERNAL SCHEMA statement, i.e.,
+// CREATE [OR REPLACE] [TEMP|TEMPORARY|PUBLIC|PRIVATE] EXTERNAL SCHEMA [IF
+// NOT EXISTS] <name> WITH CONNECTION <connection> OPTIONS (name=value, ...);
+message ASTCreateExternalSchemaStatementProto {
+  optional ASTCreateSchemaStmtBaseProto parent = 1;
+  optional ASTWithConnectionClauseProto with_connection_clause = 2;
 }
 
 message ASTAliasedQueryListProto {
@@ -1802,6 +1917,7 @@ message ASTCreateIndexStatementProto {
   optional bool is_search = 10;
   optional ASTSpannerInterleaveClauseProto spanner_interleave_clause = 11;
   optional bool spanner_is_null_filtered = 12;
+  optional bool is_vector = 13;
 }
 
 message ASTExportDataStatementProto {
@@ -1816,6 +1932,15 @@ message ASTExportModelStatementProto {
   optional ASTPathExpressionProto model_name_path = 2;
   optional ASTWithConnectionClauseProto with_connection_clause = 3;
   optional ASTOptionsListProto options_list = 4;
+}
+
+// Generic EXPORT <object_kind> METADATA statement.
+message ASTExportMetadataStatementProto {
+  optional ASTStatementProto parent = 1;
+  optional SchemaObjectKind schema_object_kind = 2;
+  optional ASTPathExpressionProto name_path = 3;
+  optional ASTWithConnectionClauseProto with_connection_clause = 4;
+  optional ASTOptionsListProto options_list = 5;
 }
 
 message ASTCallStatementProto {
@@ -1835,6 +1960,17 @@ message ASTWithPartitionColumnsClauseProto {
   optional ASTTableElementListProto table_element_list = 2;
 }
 
+// Represents a generic CREATE SNAPSHOT statement.
+// Currently used for CREATE SNAPSHOT SCHEMA statement.
+message ASTCreateSnapshotStatementProto {
+  optional ASTCreateStatementProto parent = 1;
+  optional SchemaObjectKind schema_object_kind = 2;
+  optional ASTPathExpressionProto name = 3;
+  optional ASTCloneDataSourceProto clone_data_source = 4;
+  optional ASTOptionsListProto options_list = 5;
+}
+
+// Represents a CREATE SNAPSHOT TABLE statement.
 message ASTCreateSnapshotTableStatementProto {
   optional ASTCreateStatementProto parent = 1;
   optional ASTPathExpressionProto name = 2;
@@ -1976,6 +2112,8 @@ message ASTGeneratedColumnInfoProto {
   optional ASTNodeProto parent = 1;
   optional AnyASTExpressionProto expression = 2;
   optional ASTGeneratedColumnInfoEnums.StoredMode stored_mode = 3;
+  optional ASTGeneratedColumnInfoEnums.GeneratedMode generated_mode = 4;
+  optional ASTIdentityColumnInfoProto identity_column_info = 5;
 }
 
 // Base class for CREATE TABLE elements, including column definitions and
@@ -2146,7 +2284,7 @@ message ASTGranteeListProto {
 message ASTGrantStatementProto {
   optional ASTStatementProto parent = 1;
   optional ASTPrivilegesProto privileges = 2;
-  optional ASTIdentifierProto target_type = 3;
+  repeated ASTIdentifierProto target_type_parts = 3;
   optional ASTPathExpressionProto target_path = 4;
   optional ASTGranteeListProto grantee_list = 5;
 }
@@ -2154,7 +2292,7 @@ message ASTGrantStatementProto {
 message ASTRevokeStatementProto {
   optional ASTStatementProto parent = 1;
   optional ASTPrivilegesProto privileges = 2;
-  optional ASTIdentifierProto target_type = 3;
+  repeated ASTIdentifierProto target_type_parts = 3;
   optional ASTPathExpressionProto target_path = 4;
   optional ASTGranteeListProto grantee_list = 5;
 }
@@ -2245,6 +2383,7 @@ message AnyASTAlterActionProto {
     ASTDropTtlActionProto ast_drop_ttl_action_node = 351;
     ASTSpannerAlterColumnActionProto ast_spanner_alter_column_action_node = 352;
     ASTSpannerSetOnDeleteActionProto ast_spanner_set_on_delete_action_node = 353;
+    ASTAlterColumnDropGeneratedActionProto ast_alter_column_drop_generated_action_node = 423;
   }
 }
 message ASTAlterActionProto {
@@ -2359,6 +2498,13 @@ message ASTAlterColumnDropDefaultActionProto {
 
 // ALTER table action for "ALTER COLUMN DROP NOT NULL" clause
 message ASTAlterColumnDropNotNullActionProto {
+  optional ASTAlterActionProto parent = 1;
+  optional ASTIdentifierProto column_name = 2;
+  optional bool is_if_exists = 3;
+}
+
+// ALTER table action for "ALTER COLUMN DROP GENERATED" clause
+message ASTAlterColumnDropGeneratedActionProto {
   optional ASTAlterActionProto parent = 1;
   optional ASTIdentifierProto column_name = 2;
   optional bool is_if_exists = 3;
@@ -2920,6 +3066,7 @@ message ASTCreateMaterializedViewStatementProto {
   optional ASTCreateViewStatementBaseProto parent = 1;
   optional ASTPartitionByProto partition_by = 2;
   optional ASTClusterByProto cluster_by = 3;
+  optional ASTPathExpressionProto replica_source = 4;
 }
 
 message ASTCreateApproxViewStatementProto {
@@ -3258,14 +3405,32 @@ message ASTUndropStatementProto {
   optional ASTForSystemTimeProto for_system_time = 5;
 }
 
-message ASTReplicaMaterializedViewDataSourceProto {
-  optional ASTTableDataSourceProto parent = 1;
+message ASTIdentityColumnInfoProto {
+  optional ASTNodeProto parent = 1;
+  optional ASTIdentityColumnStartWithProto start_with_value = 2;
+  optional ASTIdentityColumnIncrementByProto increment_by_value = 3;
+  optional ASTIdentityColumnMaxValueProto max_value = 4;
+  optional ASTIdentityColumnMinValueProto min_value = 5;
+  optional bool cycling_enabled = 6;
 }
 
-message ASTCreateReplicaMaterializedViewStatementProto {
-  optional ASTCreateStatementProto parent = 1;
-  optional ASTPathExpressionProto name = 2;
-  optional ASTReplicaMaterializedViewDataSourceProto data_source = 3;
-  optional ASTOptionsListProto options_list = 4;
+message ASTIdentityColumnStartWithProto {
+  optional ASTNodeProto parent = 1;
+  optional AnyASTExpressionProto value = 2;
+}
+
+message ASTIdentityColumnIncrementByProto {
+  optional ASTNodeProto parent = 1;
+  optional AnyASTExpressionProto value = 2;
+}
+
+message ASTIdentityColumnMaxValueProto {
+  optional ASTNodeProto parent = 1;
+  optional AnyASTExpressionProto value = 2;
+}
+
+message ASTIdentityColumnMinValueProto {
+  optional ASTNodeProto parent = 1;
+  optional AnyASTExpressionProto value = 2;
 }
 // clang-format on
