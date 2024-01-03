@@ -21,15 +21,14 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
       - uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: 11.0
       - name: setup
         run: |
           sudo apt-get update && sudo apt-get install -y --no-install-recommends curl ca-certificates gnupg make g++ git unzip
       - name: install bazelisk
         run: |
           go install github.com/bazelbuild/bazelisk@latest
-        env:
-          ANDROID_HOME: $HOME/.android/sdk
-          ANDROID_SDK_ROOT: $HOME/.android/sdk
       - name: checkout zetasql
         uses: actions/checkout@v4
         with:
@@ -43,9 +42,6 @@ jobs:
           cd ./.zetasql && bazelisk build '//zetasql/parser:gen_protos'
           PROTO_PATH=$(find $(readlink bazel-out) -name 'parse_tree.proto')
           cp $PROTO_PATH ../zetasql/parser/parse_tree.proto
-        env:
-          USE_BAZEL_VERSION: 7.0.0
-          ANDROID_HOME: /home/runner/.android/sdk
       - name: commit and push if exists proto
         run: |
           git add -N .
