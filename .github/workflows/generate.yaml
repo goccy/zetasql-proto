@@ -10,35 +10,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v4
-        with:
-          go-version: '1.21'
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-      - uses: actions/setup-java@v3
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-      - uses: android-actions/setup-android@v3
-        with:
-          cmdline-tools-version: 10406996
-      - name: setup
+      - name: build container
         run: |
-          sudo apt-get update && sudo apt-get install -y --no-install-recommends curl ca-certificates gnupg make g++ unzip
-      - name: checkout zetasql
-        uses: actions/checkout@v4
-        with:
-          repository: google/zetasql
-          path: .zetasql
-      - name: copy all proto files
+          docker build . -t zetasql
+          docker run -d -it zetasql bash
+      - name: copy proto
         run: |
-          rsync -a --prune-empty-dirs --include '*/' --include '*.proto' --exclude '*' .zetasql/zetasql .
-      - name: generate proto
-        run: |
-          cd ./.zetasql && bazelisk build '//zetasql/parser:gen_protos'
-          PROTO_PATH=$(find $(readlink bazel-out) -name 'parse_tree.proto')
-          cp $PROTO_PATH ../zetasql/parser/parse_tree.proto
+          docker cp $(docker ps --format "{{.ID}}"):/work/parse_tree.proto ./zetasql/parser/parse_tree.proto
       - name: commit and push if exists proto
         run: |
           git add -N .
